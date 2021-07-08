@@ -1,5 +1,19 @@
+import json
+
 class Logger():
-    
+	logs_open = False
+	postlist = []
+	subscribers = []
+
+	@staticmethod
+	def subscribe(subscriber):
+		try:
+			subscriber.logger_event("subscribed to logger posts.")
+		except:
+			Logger("utils/logger").log_error("You subscribed to logger posts from a class with no logger_event() function.")
+			raise Exception("subscriber doesn't have logger_event() function")
+		Logger.subscribers.append(subscriber)
+
 	def __init__(self, path):
 
 		self.path = path
@@ -88,7 +102,28 @@ class Logger():
 
 	# display
 	def display(self, loginfo, msg, msg_style, msg_color):
-		print(f'{self.escape_code}{msg_style};{msg_color}{self.end_escape}[{self.convert_string(loginfo)}] [{self.convert_string(self.path)}]: {msg}{self.end}')
+		log = f"[{self.convert_string(loginfo)}] [{self.convert_string(self.path)}]: {msg}"
+		print(f'{self.escape_code}{msg_style};{msg_color}{self.end_escape}{log}{self.end}')
+		self.post(log)
+
+	
+	# post
+	def post(self, log):
+		if Logger.logs_open:
+			Logger.postlist.append(log)
+		else:
+			Logger.logs_open = True
+			Logger.postlist.append(log)
+			while not len(Logger.postlist) == 0:
+				with open("data/logs.json", "r") as f:
+					logs = json.load(f)
+				post = Logger.postlist.pop(0)
+				logs.append(post)
+				for subscriber in Logger.subscribers:
+					subscriber.logger_event(post) 
+				with open("data/logs.json", "w") as f:
+					json.dump(logs, f, indent=4)
+			Logger.logs_open = False
 
 
 	#info
